@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ordonnance Médicale</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .section { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 id="doctor-name">CHARGEMENT...</h1>
+        <p id="prescription-date"></p>
+    </div>
+
+    <div class="section">
+        <h2>Informations Patient</h2>
+        <p><strong>Nom:</strong> <span id="patient-name"></span></p>
+        <p><strong>ID:</strong> <span id="patient-id"></span></p>
+    </div>
+
+    <div class="section">
+        <h2>Médicaments Prescrits</h2>
+        <table id="medications">
+            <thead>
+                <tr>
+                    <th>Médicament</th>
+                    <th>Dose</th>
+                    <th>Horaires</th>
+                    <th>Durée</th>
+                    <th>Repas</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rempli dynamiquement -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function loadPrescription(data) {
+            document.getElementById('doctor-name').textContent = data.doctorName;
+            document.getElementById('prescription-date').textContent = 'Date: ' + data.date;
+            document.getElementById('patient-name').textContent = data.patientName;
+            document.getElementById('patient-id').textContent = data.patientId;
+
+            const tbody = document.querySelector('#medications tbody');
+            data.prescriptions.forEach(med => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${med.medicament || '-'}</td>
+                    <td>${med.dose || '-'}</td>
+                    <td>${med.horaires?.join(', ') || '-'}</td>
+                    <td>${med.durée || '-'}</td>
+                    <td>${med.repas || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
