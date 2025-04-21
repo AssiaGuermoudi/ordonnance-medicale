@@ -1,3 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ordonnance Médicale</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .error {
+            color: red;
+            border: 1px solid red;
+            background-color: #ffe5e5;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .loading {
+            font-style: italic;
+            color: gray;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+
+<div id="prescription-content">Chargement...</div>
+
 <script>
     function getPrescriptionDataFromUrl() {
         try {
@@ -5,7 +49,6 @@
             const encodedData = urlParams.get('data');
             
             if (!encodedData) {
-                // Alternative: Essayez avec les anciens paramètres séparés
                 const prescriptionId = urlParams.get('prescription_id');
                 const patientId = urlParams.get('patient_id');
                 const doctorId = urlParams.get('doctor_id');
@@ -14,9 +57,7 @@
                     return {
                         prescriptionId: prescriptionId,
                         patientId: patientId,
-                        doctorId: doctorId,
-                        // Vous devrez peut-être faire une requête API ici
-                        // pour récupérer les autres données
+                        doctorId: doctorId
                     };
                 }
                 throw new Error("Aucune donnée trouvée");
@@ -38,7 +79,7 @@
         
         if (data.error) {
             contentDiv.innerHTML = `
-                <div class="section error">
+                <div class="error">
                     <h2>Erreur</h2>
                     <p>${data.error}</p>
                     <p>${data.details || ''}</p>
@@ -47,42 +88,55 @@
             return;
         }
 
-        // Si vous n'avez que l'ID, faites une requête pour récupérer les données
+        // Si données manquantes, on récupère via API
         if (data.prescriptionId && !data.prescriptions) {
             contentDiv.innerHTML = `<div class="loading">Récupération des données...</div>`;
-            
             try {
                 const response = await fetch(`https://votre-api.com/prescriptions/${data.prescriptionId}`);
                 data = await response.json();
             } catch (e) {
                 contentDiv.innerHTML = `
-                    <div class="section error">
+                    <div class="error">
                         <h2>Erreur</h2>
                         <p>Impossible de charger l'ordonnance</p>
+                        <p>${e.message}</p>
                     </div>
                 `;
                 return;
             }
         }
 
-        // Affichez les données comme avant
-        const medicationsRows = data.prescriptions.map(med => `
+        const medicationsRows = (data.prescriptions || []).map(med => `
             <tr>
                 <td>${med.medicament || '-'}</td>
                 <td>${med.dose || '-'}</td>
-                <td>${med.horaires?.join(', ') || '-'}</td>
-                <td>${med.durée || '-'}</td>
+                <td>${(med.horaires || []).join(', ') || '-'}</td>
+                <td>${med.duree || '-'}</td>
                 <td>${med.repas || '-'}</td>
             </tr>
         `).join('');
 
+        const formattedDate = data.date ? new Date(data.date).toLocaleDateString('fr-FR') : '';
+
         contentDiv.innerHTML = `
-            <!-- Votre template HTML existant -->
             <div class="header">
                 <h1>ORDONNANCE MÉDICALE</h1>
-                <p>${data.doctor_name || 'Médecin inconnu'} - ${data.date || ''}</p>
+                <p>${data.doctor_name || 'Médecin inconnu'} - ${formattedDate}</p>
             </div>
-            <!-- ... reste du template ... -->
+            <table>
+                <thead>
+                    <tr>
+                        <th>Médicament</th>
+                        <th>Dosage</th>
+                        <th>Horaires</th>
+                        <th>Durée</th>
+                        <th>Repas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${medicationsRows}
+                </tbody>
+            </table>
         `;
     }
 
@@ -91,3 +145,6 @@
         displayPrescription(data);
     });
 </script>
+
+</body>
+</html>
