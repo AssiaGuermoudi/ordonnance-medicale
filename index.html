@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -107,53 +106,19 @@
             color: #6b7280;
             font-size: 14px;
         }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #1a4b8c;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1 id="doctor-name">ORDONNANCE MÉDICALE</h1>
-            <p id="prescription-date"></p>
-        </div>
-
-        <div class="section">
-            <h2>Informations Patient</h2>
-            <div class="patient-info">
-                <div>
-                    <p><strong>Nom:</strong> <span id="patient-name"></span></p>
-                    <p><strong>ID Patient:</strong> <span id="patient-id"></span></p>
-                </div>
-                <div>
-                    <p><strong>Médecin:</strong> <span id="doctor-name-value"></span></p>
-                    <p><strong>Date:</strong> <span id="prescription-date-value"></span></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>Médicaments Prescrits</h2>
-            <table id="medications">
-                <thead>
-                    <tr>
-                        <th>Médicament</th>
-                        <th>Dose</th>
-                        <th>Horaires</th>
-                        <th>Durée</th>
-                        <th>Repas</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Rempli dynamiquement -->
-                </tbody>
-            </table>
-        </div>
-
-        <button class="save-btn" onclick="savePrescription()">
-            <i class="fas fa-save"></i> Enregistrer
-        </button>
-
-        <div class="footer">
-            <p>Ordonnance générée électroniquement - Validité 3 mois</p>
+        <div id="prescription-content">
+            <div class="loading">Chargement de l'ordonnance...</div>
         </div>
     </div>
 
@@ -161,66 +126,97 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
     <script>
-        function loadPrescription(data) {
-            document.getElementById('doctor-name-value').textContent = data.doctorName;
-            document.getElementById('prescription-date').textContent = 'Ordonnance du ' + data.date;
-            document.getElementById('prescription-date-value').textContent = data.date;
-            document.getElementById('patient-name').textContent = data.patientName;
-            document.getElementById('patient-id').textContent = data.patientId;
-
-            const tbody = document.querySelector('#medications tbody');
-            tbody.innerHTML = ''; // Vider le tableau avant de le remplir
+        // Fonction pour extraire les données du QR code depuis l'URL
+        function getPrescriptionDataFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedData = urlParams.get('data');
             
-            data.prescriptions.forEach(med => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
+            if (encodedData) {
+                try {
+                    return JSON.parse(decodeURIComponent(encodedData));
+                } catch (e) {
+                    console.error("Erreur de décodage des données:", e);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        // Fonction pour afficher l'ordonnance
+        function displayPrescription(data) {
+            if (!data) {
+                document.getElementById('prescription-content').innerHTML = `
+                    <div class="section">
+                        <h2>Erreur</h2>
+                        <p>Impossible de charger l'ordonnance. Veuillez scanner à nouveau le QR code.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const medicationsRows = data.prescriptions.map(med => `
+                <tr>
                     <td>${med.medicament || '-'}</td>
                     <td>${med.dose || '-'}</td>
                     <td>${med.horaires?.join(', ') || '-'}</td>
                     <td>${med.durée || '-'}</td>
                     <td>${med.repas || '-'}</td>
-                `;
-                tbody.appendChild(row);
-            });
+                </tr>
+            `).join('');
+
+            document.getElementById('prescription-content').innerHTML = `
+                <div class="header">
+                    <h1>ORDONNANCE MÉDICALE</h1>
+                    <p id="prescription-date">Ordonnance du ${data.date || ''}</p>
+                </div>
+
+                <div class="section">
+                    <h2>Informations Patient</h2>
+                    <div class="patient-info">
+                        <div>
+                            <p><strong>Nom:</strong> ${data.patientName || '-'}</p>
+                            <p><strong>ID Patient:</strong> ${data.patientId || '-'}</p>
+                        </div>
+                        <div>
+                            <p><strong>Médecin:</strong> ${data.doctorName || '-'}</p>
+                            <p><strong>Date:</strong> ${data.date || '-'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Médicaments Prescrits</h2>
+                    <table id="medications">
+                        <thead>
+                            <tr>
+                                <th>Médicament</th>
+                                <th>Dose</th>
+                                <th>Horaires</th>
+                                <th>Durée</th>
+                                <th>Repas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${medicationsRows}
+                        </tbody>
+                    </table>
+                </div>
+
+                <button class="save-btn" onclick="window.print()">
+                    <i class="fas fa-print"></i> Imprimer
+                </button>
+
+                <div class="footer">
+                    <p>Ordonnance générée électroniquement - Validité 3 mois</p>
+                </div>
+            `;
         }
 
-        function savePrescription() {
-            // Ici vous pouvez ajouter la logique pour enregistrer au format PDF
-            // ou envoyer par email, etc.
-            alert('Fonctionnalité d\'enregistrement à implémenter');
-            
-            // Exemple simple d'impression:
-            // window.print();
-        }
-
-        // Exemple de données pour le démo - à remplacer par vos données réelles
-        const demoData = {
-            doctorName: "Dr. Dupont",
-            date: "15/06/2023",
-            patientName: "Jean Martin",
-            patientId: "PAT123456",
-            prescriptions: [
-                {
-                    medicament: "Doliprane",
-                    dose: "500mg",
-                    horaires: ["08:00", "20:00"],
-                    durée: "7 jours",
-                    repas: "Après repas"
-                },
-                {
-                    medicament: "Amoxicilline",
-                    dose: "1g",
-                    horaires: ["12:00", "18:00"],
-                    durée: "10 jours",
-                    repas: "Pendant le repas"
-                }
-            ]
-        };
-
-        // Charger les données de démo au démarrage
-        window.onload = function() {
-            loadPrescription(demoData);
-        };
+        // Au chargement de la page, extraire et afficher les données
+        document.addEventListener('DOMContentLoaded', function() {
+            const prescriptionData = getPrescriptionDataFromUrl();
+            displayPrescription(prescriptionData);
+        });
     </script>
 </body>
 </html>
