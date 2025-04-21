@@ -1,222 +1,93 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Ordonnance Médicale</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 0;
-            margin: 0;
-            background-color: #f5f9ff;
-            color: #333;
-        }
-        
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background-color: #1a4b8c;
-            color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .section {
-            margin-bottom: 25px;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        
-        h1 {
-            margin: 0;
-            font-size: 28px;
-        }
-        
-        h2 {
-            color: #1a4b8c;
-            border-bottom: 2px solid #e1e8f1;
-            padding-bottom: 8px;
-            margin-top: 0;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        
-        th {
-            background-color: #1a4b8c;
-            color: white;
-            padding: 12px;
-            text-align: left;
-        }
-        
-        td {
-            border: 1px solid #e1e8f1;
-            padding: 10px;
-        }
-        
-        tr:nth-child(even) {
-            background-color: #f8fafc;
-        }
-        
-        .patient-info {
-            display: flex;
-            gap: 30px;
-            margin-top: 15px;
-        }
-        
-        .patient-info p {
-            margin: 5px 0;
-        }
-        
-        .save-btn {
-            display: block;
-            width: 200px;
-            margin: 30px auto;
-            padding: 12px;
-            background-color: #1a4b8c;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            text-align: center;
-            text-decoration: none;
-        }
-        
-        .save-btn:hover {
-            background-color: #0d3a73;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #6b7280;
-            font-size: 14px;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            font-size: 18px;
-            color: #1a4b8c;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div id="prescription-content">
-            <div class="loading">Chargement de l'ordonnance...</div>
-        </div>
-    </div>
-
-    <!-- Font Awesome pour les icônes -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-
-    <script>
-        // Fonction pour extraire les données du QR code depuis l'URL
-        function getPrescriptionDataFromUrl() {
+<script>
+    function getPrescriptionDataFromUrl() {
+        try {
             const urlParams = new URLSearchParams(window.location.search);
             const encodedData = urlParams.get('data');
             
-            if (encodedData) {
-                try {
-                    return JSON.parse(decodeURIComponent(encodedData));
-                } catch (e) {
-                    console.error("Erreur de décodage des données:", e);
-                    return null;
+            if (!encodedData) {
+                // Alternative: Essayez avec les anciens paramètres séparés
+                const prescriptionId = urlParams.get('prescription_id');
+                const patientId = urlParams.get('patient_id');
+                const doctorId = urlParams.get('doctor_id');
+                
+                if (prescriptionId) {
+                    return {
+                        prescriptionId: prescriptionId,
+                        patientId: patientId,
+                        doctorId: doctorId,
+                        // Vous devrez peut-être faire une requête API ici
+                        // pour récupérer les autres données
+                    };
                 }
+                throw new Error("Aucune donnée trouvée");
             }
-            return null;
+            
+            return JSON.parse(decodeURIComponent(encodedData));
+            
+        } catch (e) {
+            console.error("Erreur:", e);
+            return {
+                error: "Format d'ordonnance invalide",
+                details: e.message
+            };
+        }
+    }
+
+    async function displayPrescription(data) {
+        const contentDiv = document.getElementById('prescription-content');
+        
+        if (data.error) {
+            contentDiv.innerHTML = `
+                <div class="section error">
+                    <h2>Erreur</h2>
+                    <p>${data.error}</p>
+                    <p>${data.details || ''}</p>
+                </div>
+            `;
+            return;
         }
 
-        // Fonction pour afficher l'ordonnance
-        function displayPrescription(data) {
-            if (!data) {
-                document.getElementById('prescription-content').innerHTML = `
-                    <div class="section">
+        // Si vous n'avez que l'ID, faites une requête pour récupérer les données
+        if (data.prescriptionId && !data.prescriptions) {
+            contentDiv.innerHTML = `<div class="loading">Récupération des données...</div>`;
+            
+            try {
+                const response = await fetch(`https://votre-api.com/prescriptions/${data.prescriptionId}`);
+                data = await response.json();
+            } catch (e) {
+                contentDiv.innerHTML = `
+                    <div class="section error">
                         <h2>Erreur</h2>
-                        <p>Impossible de charger l'ordonnance. Veuillez scanner à nouveau le QR code.</p>
+                        <p>Impossible de charger l'ordonnance</p>
                     </div>
                 `;
                 return;
             }
-
-            const medicationsRows = data.prescriptions.map(med => `
-                <tr>
-                    <td>${med.medicament || '-'}</td>
-                    <td>${med.dose || '-'}</td>
-                    <td>${med.horaires?.join(', ') || '-'}</td>
-                    <td>${med.durée || '-'}</td>
-                    <td>${med.repas || '-'}</td>
-                </tr>
-            `).join('');
-
-            document.getElementById('prescription-content').innerHTML = `
-                <div class="header">
-                    <h1>ORDONNANCE MÉDICALE</h1>
-                    <p id="prescription-date">Ordonnance du ${data.date || ''}</p>
-                </div>
-
-                <div class="section">
-                    <h2>Informations Patient</h2>
-                    <div class="patient-info">
-                        <div>
-                            <p><strong>Nom:</strong> ${data.patientName || '-'}</p>
-                            <p><strong>ID Patient:</strong> ${data.patientId || '-'}</p>
-                        </div>
-                        <div>
-                            <p><strong>Médecin:</strong> ${data.doctorName || '-'}</p>
-                            <p><strong>Date:</strong> ${data.date || '-'}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h2>Médicaments Prescrits</h2>
-                    <table id="medications">
-                        <thead>
-                            <tr>
-                                <th>Médicament</th>
-                                <th>Dose</th>
-                                <th>Horaires</th>
-                                <th>Durée</th>
-                                <th>Repas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${medicationsRows}
-                        </tbody>
-                    </table>
-                </div>
-
-                <button class="save-btn" onclick="window.print()">
-                    <i class="fas fa-print"></i> Imprimer
-                </button>
-
-                <div class="footer">
-                    <p>Ordonnance générée électroniquement - Validité 3 mois</p>
-                </div>
-            `;
         }
 
-        // Au chargement de la page, extraire et afficher les données
-        document.addEventListener('DOMContentLoaded', function() {
-            const prescriptionData = getPrescriptionDataFromUrl();
-            displayPrescription(prescriptionData);
-        });
-    </script>
-</body>
-</html>
+        // Affichez les données comme avant
+        const medicationsRows = data.prescriptions.map(med => `
+            <tr>
+                <td>${med.medicament || '-'}</td>
+                <td>${med.dose || '-'}</td>
+                <td>${med.horaires?.join(', ') || '-'}</td>
+                <td>${med.durée || '-'}</td>
+                <td>${med.repas || '-'}</td>
+            </tr>
+        `).join('');
+
+        contentDiv.innerHTML = `
+            <!-- Votre template HTML existant -->
+            <div class="header">
+                <h1>ORDONNANCE MÉDICALE</h1>
+                <p>${data.doctor_name || 'Médecin inconnu'} - ${data.date || ''}</p>
+            </div>
+            <!-- ... reste du template ... -->
+        `;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const data = getPrescriptionDataFromUrl();
+        displayPrescription(data);
+    });
+</script>
