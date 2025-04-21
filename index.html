@@ -74,19 +74,15 @@
         }
     }
 
-    async function displayPrescription(data) {
-        const contentDiv = document.getElementById('prescription-content');
-        
-        if (data.error) {
-            contentDiv.innerHTML = `
-                <div class="error">
-                    <h2>Erreur</h2>
-                    <p>${data.error}</p>
-                    <p>${data.details || ''}</p>
-                </div>
-            `;
-            return;
-        }
+    const medicationsRows = data.prescriptions.map(med => `
+    <tr>
+        <td>${med.medicament || '-'}</td>
+        <td>${med.dose || '-'}</td>
+        <td>${med.horaires?.join(', ') || '-'}</td>
+        <td>${med.duree || '-'}</td> <!-- ici sans accent -->
+        <td>${med.repas || '-'}</td>
+    </tr>
+`).join('');
 
         // Si données manquantes, on récupère via API
         if (data.prescriptionId && !data.prescriptions) {
